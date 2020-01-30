@@ -1,0 +1,16 @@
+{
+	"version": "test-config",
+	"pipelines": [
+		{
+			"name": "eventids",
+			"services": [
+				"step1",
+				"step2",
+				"step3",
+				"step4a",
+				"step4b",
+				"step5"
+			]
+		}
+	]
+}
