@@ -14,6 +14,7 @@ struct Config {
 #[derive(Deserialize, Debug)]
 struct Pipeline {
     name: String,
+    max_seconds_to_reach_end: u64,
     services: Vec<String>,
 }
 

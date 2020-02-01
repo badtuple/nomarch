@@ -3,6 +3,7 @@
 	"pipelines": [
 		{
 			"name": "eventids",
+			"max_seconds_to_reach_end": 900,
 			"services": [
 				"step1",
 				"step2",
