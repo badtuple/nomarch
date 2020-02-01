@@ -8,7 +8,7 @@ use std::path::Path;
 #[derive(Deserialize, Debug)]
 struct Config {
     version: String,
-    pipelines: Vec<Pipeline>,
+    pipeline: Pipeline,
 }
 
 #[derive(Deserialize, Debug)]
@@ -32,7 +32,6 @@ async fn health() -> impl Responder {
 
 #[derive(Deserialize, Debug)]
 struct EventRequest {
-    pipeline: String,
     service: String,
     events: Vec<Event>,
 }
