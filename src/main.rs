@@ -1,9 +1,15 @@
+#[macro_use]
+extern crate log;
+
 use actix_web::{get, post, web, App, HttpServer, Responder};
 use serde::Deserialize;
 
 use serde_json;
 use std::fs::File;
 use std::path::Path;
+
+use env_logger::{Builder, Target};
+use log::LevelFilter;
 
 #[derive(Deserialize, Debug)]
 struct Config {
@@ -19,10 +25,18 @@ struct Pipeline {
 }
 
 fn load_config() -> Config {
+    info!("loading config from config.json");
     let path = Path::new("config.json");
     let file = File::open(path).expect("config not found");
 
     serde_json::from_reader(file).expect("error while reading json")
+}
+
+fn setup_logger() {
+    Builder::new()
+        .filter(None, LevelFilter::Info)
+        .target(Target::Stdout)
+        .init();
 }
 
 #[get("/")]
@@ -44,14 +58,19 @@ struct Event {
 
 #[post("/events")]
 async fn register_events(req: web::Json<EventRequest>) -> impl Responder {
-    println!("events: {:?}", req);
+    info!("events: {:?}", req);
     "{}"
 }
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    let config = load_config();
+    setup_logger();
+    info!("starting nomarch");
 
+    let config = load_config();
+    info!("configuration loaded: {:?}", config);
+
+    info!("server started on port 8080");
     HttpServer::new(|| App::new().service(health).service(register_events))
         .bind("127.0.0.1:8080")?
         .run()
