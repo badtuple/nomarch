@@ -1,5 +1,9 @@
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate crossbeam_channel;
+
+mod processor;
 
 use actix_web::{get, post, web, App, HttpServer, Responder};
 use serde::Deserialize;
@@ -10,6 +14,7 @@ use std::path::Path;
 
 use env_logger::{Builder, Target};
 use log::LevelFilter;
+use processor::start;
 
 #[derive(Deserialize, Debug)]
 struct Config {
