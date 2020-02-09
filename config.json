@@ -1,15 +1,54 @@
 {
-	"version": "test-config",
-	"pipeline": {
-		"name": "eventids",
-		"max_seconds_to_reach_end": 900,
-		"services": [
-			"step1",
-			"step2",
-			"step3",
-			"step4a",
-			"step4b",
-			"step5"
-		]
-	}
+  "version": "test-config",
+  "pipelines": [
+    {
+      "name": "pipeline1",
+      "max_seconds_to_reach_end": 120,
+      "services": [
+        {
+          "name": "step1",
+          "children": [
+            "step2"
+          ]
+        },
+        {
+          "name": "step2",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "pipeline2",
+      "max_seconds_to_reach_end": 900,
+      "services": [
+        {
+          "name": "step2",
+          "children": [
+            "step3"
+          ]
+        },
+        {
+          "name": "step3",
+          "children": [
+            "step4a",
+            "step4b"
+          ]
+        },
+        {
+          "name": "step4a",
+          "children": []
+        },
+        {
+          "name": "step4b",
+          "children": [
+            "step5"
+          ]
+        },
+        {
+          "name": "step5",
+          "children": []
+        }
+      ]
+    }
+  ]
 }
