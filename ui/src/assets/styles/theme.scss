@@ -1,0 +1,45 @@
+* {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  text-decoration: none;
+  list-style-type: none;
+  z-index: 300;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow-x: hidden;
+}
+
+.app {
+  .navbar {
+    display: flex;
+    flex-direction: row;
+    padding: 10px 20px;
+    background: lightgray;
+
+    h1 {
+      flex: 1 1;
+      font: 600 22px/1 sans-serif;
+    }
+    .running-time {
+      flex: 0 0;
+      margin-left: auto;
+      white-space: nowrap;
+      font: 400 14px/22px sans-serif;
+    }
+  }
+  .pipeline {
+    border-bottom: 1px solid #CCC;
+    background: #f7f7f7;
+    padding: 10px;
+
+    h2 {
+      margin-bottom: 10px;
+      font: 600 18px/1 sans-serif;
+    }
+  }
+}
