@@ -2,15 +2,15 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Pipeline {
-    name: String,
-    max_seconds_to_reach_end: u64,
-    services: Vec<Service>,
+    pub name: String,
+    pub max_seconds_to_reach_end: u64,
+    pub services: Vec<Service>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Service {
-    name: String,
-    children: Vec<String>,
+    pub name: String,
+    pub children: Vec<String>,
 
     #[serde(default)]
     stats: Stats,
