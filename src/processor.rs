@@ -3,6 +3,7 @@ use chrono::Utc;
 use crossbeam_channel::{bounded, tick, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
+use uuid::Uuid;
 
 // Trying to add to the channel once it's reached capacity will block.
 // We're using this as an incredibly light form of backpressure.
@@ -11,6 +12,7 @@ use std::time::Duration;
 // for that to happen.
 const MAX_CHANNEL_BUFFER: usize = 100;
 
+#[derive(Debug)]
 pub struct Event {
     id: u128,
     timestamp: u32,
@@ -68,8 +70,34 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 info!("added {:?} and updated {:?} events for pipeline {:?}", added, updated, pipeline.name);
             },
             recv(ticker) -> _ => {
-                // Expire events and collect stats
-                info!("expiring events for pipeline {:?}", pipeline.name);
+                let timestamp = (Utc::now().timestamp() as u64 - pipeline.max_seconds_to_reach_end) as u32;
+                let mut expire_until_idx: isize = -1;
+                for (i, ev) in events.iter().enumerate() {
+                    if ev.timestamp <= timestamp {
+                        expire_until_idx = i as isize;
+                        break
+                    }
+                }
+
+                // nothing to expire yet
+                if expire_until_idx < 0 {
+                    continue
+                }
+
+                let unexpired = events.split_off(expire_until_idx as usize + 1);
+                let expired = events;
+                events = unexpired;
+
+                info!("expiring {:?} events", expired.len());
+
+                let complete = pipeline.completed_services_mask();
+                for e in expired {
+                    if e.services == complete {
+                        info!("event id {:?} completed pipeline {:?}", Uuid::from_u128(e.id), pipeline.name);
+                    } else {
+                        info!("event id {:?} did not complete pipeline {:?} : {:#018b}", Uuid::from_u128(e.id), pipeline.name, e.services);
+                    }
+                }
             },
         }
     }
