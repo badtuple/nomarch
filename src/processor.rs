@@ -70,12 +70,13 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 info!("added {:?} and updated {:?} events for pipeline {:?}", added, updated, pipeline.name);
             },
             recv(ticker) -> _ => {
-                let timestamp = (Utc::now().timestamp() as u64 - pipeline.max_seconds_to_reach_end) as u32;
+
+                let now = Utc::now().timestamp() as u32;
                 let mut expire_until_idx: isize = -1;
                 for (i, ev) in events.iter().enumerate() {
-                    if ev.timestamp <= timestamp {
+                    let expire_at = ev.timestamp + pipeline.max_seconds_to_reach_end as u32;
+                    if expire_at < now {
                         expire_until_idx = i as isize;
-                        break
                     }
                 }
 
