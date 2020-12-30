@@ -28,7 +28,7 @@ impl Config {
             .position(|s| s.name == service_id)?;
 
         // toggles bit corresponding to index of service
-        let mask: u32 = 0 | 1 << service_idx;
+        let mask: u32 = 1 << service_idx;
         Some(mask)
     }
 }
