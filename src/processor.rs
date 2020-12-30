@@ -72,11 +72,18 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
             },
             recv(ticker) -> _ => {
                 let now = Utc::now().timestamp() as u32;
+
                 let mut expire_until_idx: isize = -1;
                 for (i, ev) in events.iter().enumerate() {
                     let expire_at = ev.timestamp + pipeline.max_seconds_to_reach_end as u32;
+
                     if expire_at < now {
-                        expire_until_idx = i as isize;
+                      expire_until_idx = i as isize;
+                      if ev.services == complete {
+                          info!("event id {:?} completed pipeline {:?}", Uuid::from_u128(ev.id), pipeline.name);
+                      } else {
+                          info!("event id {:?} did not complete pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
+                      }
                     }
 
                     if expire_at >= now {
@@ -89,19 +96,8 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                     continue
                 }
 
-                let unexpired = events.split_off(expire_until_idx as usize + 1);
-                let expired = events;
-                events = unexpired;
-
-                info!("expiring {:?} events", expired.len());
-
-                for e in expired {
-                    if e.services == complete {
-                        info!("event id {:?} completed pipeline {:?}", Uuid::from_u128(e.id), pipeline.name);
-                    } else {
-                        info!("event id {:?} did not complete pipeline {:?} : {:#018b}", Uuid::from_u128(e.id), pipeline.name, e.services);
-                    }
-                }
+                events = events.split_off(expire_until_idx as usize + 1);
+                info!("expiring {:?} events", expire_until_idx + 1);
             },
         }
     }
