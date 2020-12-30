@@ -10,7 +10,7 @@ use uuid::Uuid;
 // If the channel backs up enough to timeout, then it's under too much load.
 // Since we're doing everything in memory, it'd have to be under crazy stress
 // for that to happen.
-const MAX_CHANNEL_BUFFER: usize = 100;
+const MAX_CHANNEL_BUFFER: usize = 1000;
 
 #[derive(Debug)]
 pub struct Event {
