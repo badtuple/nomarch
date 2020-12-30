@@ -39,6 +39,7 @@ pub fn start(pipeline: Pipeline) -> Sender<EventBatch> {
 
 fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
     let mut events: Vec<Event> = vec![];
+    let complete = pipeline.completed_services_mask();
 
     let ticker = tick(Duration::from_secs(1));
 
@@ -94,7 +95,6 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
 
                 info!("expiring {:?} events", expired.len());
 
-                let complete = pipeline.completed_services_mask();
                 for e in expired {
                     if e.services == complete {
                         info!("event id {:?} completed pipeline {:?}", Uuid::from_u128(e.id), pipeline.name);
