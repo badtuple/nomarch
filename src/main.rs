@@ -71,12 +71,6 @@ async fn event_handler(
     "{}"
 }
 
-#[get("/pipelines")]
-async fn pipeline_handler(data: web::Data<SharedState>) -> impl Responder {
-    let config = data.get_ref().config.clone();
-    web::Json(config)
-}
-
 struct SharedState {
     config: Config,
     senders: HashMap<String, Sender<EventBatch>>,
@@ -105,7 +99,6 @@ async fn main() -> std::io::Result<()> {
             })
             .wrap(Logger::default())
             .service(health_handler)
-            .service(pipeline_handler)
             .service(event_handler)
     })
     .bind("0.0.0.0:8080")?

@@ -22,13 +22,4 @@ impl Pipeline {
 pub struct Service {
     pub name: String,
     pub children: Vec<String>,
-
-    #[serde(default)]
-    stats: Stats,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
-pub struct Stats {
-    events_seen: f64,
-    events_expected: f64,
 }
