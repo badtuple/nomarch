@@ -89,10 +89,6 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                           info!("event id {:?} did not complete pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
                       }
                     }
-
-                    if expire_at >= now {
-                        break
-                    }
                 }
 
                 // Add all brand new events from event_set to the main event list
