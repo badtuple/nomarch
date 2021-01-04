@@ -1,6 +1,7 @@
 use crate::pipeline::Pipeline;
 use chrono::Utc;
 use crossbeam_channel::{bounded, tick, Receiver, Sender};
+use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
 use uuid::Uuid;
@@ -12,7 +13,7 @@ use uuid::Uuid;
 // for that to happen.
 const MAX_CHANNEL_BUFFER: usize = 1000;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Event {
     id: u128,
     timestamp: u32,
@@ -41,6 +42,9 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
     let mut events: Vec<Event> = vec![];
     let complete = pipeline.completed_services_mask();
 
+    // Used to batch incoming events that will be applied to the full events list on tick.
+    let mut event_set: HashMap<u128, Event> = HashMap::new();
+
     let ticker = tick(Duration::from_secs(1));
 
     loop {
@@ -52,30 +56,30 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 // by event timestamp. This makes expiration simple.
                 let timestamp = Utc::now().timestamp() as u32;
 
-                let mut added = 0;
-                let mut updated = 0;
-
-                for id in batch.events {
-                    match events.iter().position(|e| e.id == id) {
-                        Some(idx) => {
-                            events[idx].services |= batch.service_mask;
-                            updated += 1;
-                        },
-                        None => {
-                            events.push(Event{ id, timestamp, services: batch.service_mask });
-                            added += 1;
-                        }
-                    };
+                for id in &batch.events {
+                    event_set.entry(*id)
+                        .and_modify(|e| { (*e).services |= batch.service_mask })
+                        .or_insert(Event{id: *id, timestamp, services: batch.service_mask});
                 }
-
-                info!("added {:?} and updated {:?} events for pipeline {:?}", added, updated, pipeline.name);
             },
             recv(ticker) -> _ => {
                 let now = Utc::now().timestamp() as u32;
 
+                // Keep track of added and updated events from event_set for logging purposes
+                let mut added = 0;
+                let mut updated = 0;
+
                 let mut expire_until_idx: isize = -1;
-                for (i, ev) in events.iter().enumerate() {
+                for (i, ev) in events.iter_mut().enumerate() {
                     let expire_at = ev.timestamp + pipeline.max_seconds_to_reach_end as u32;
+
+                    // Incorporate latest updates from event_set.
+                    // We need to remove from event_set so we can add all remaining (and therefore
+                    // new) events to the main list at the end.
+                    if let Some(event_update) = event_set.remove(&ev.id) {
+                            (*ev).services |= event_update.services;
+                            updated += 1;
+                    }
 
                     if expire_at < now {
                       expire_until_idx = i as isize;
@@ -91,13 +95,28 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                     }
                 }
 
+                // Add all brand new events from event_set to the main event list
+                // TODO: There is an `into_values` method in nightly that will be useful here once
+                // stabilized
+                for v in event_set.values() {
+                    events.push(*v);
+                    added += 1;
+                }
+
+                // Reset event_set
+                event_set = HashMap::new();
+
+                let expired = expire_until_idx+1;
+                if expired > 0 || updated > 0 || added > 0 {
+                  info!("expired {:?} events, added {:?} events, updated {:?} events for pipeline {:?}", expired, added, updated, pipeline.name);
+                }
+
                 // nothing to expire yet
                 if expire_until_idx < 0 {
                     continue
                 }
 
                 events = events.split_off(expire_until_idx as usize + 1);
-                info!("expiring {:?} events", expire_until_idx + 1);
             },
         }
     }
