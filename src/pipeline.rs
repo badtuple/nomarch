@@ -16,10 +16,23 @@ impl Pipeline {
         }
         mask
     }
+
+    pub fn optional_services_mask(&self) -> u32 {
+        let mut mask = 0;
+        for (pos, e) in self.services.iter().enumerate() {
+            if e.optional {
+                mask |= 1 << pos;
+            } else {
+                mask |= 0 << pos;
+            }
+        }
+        mask
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Service {
     pub name: String,
     pub children: Vec<String>,
+    pub optional: bool,
 }

@@ -9,11 +9,13 @@
           "name": "step1",
           "children": [
             "step2"
-          ]
+          ],
+          "optional": false
         },
         {
           "name": "step2",
-          "children": []
+          "children": [],
+          "optional": false
         }
       ]
     },
@@ -25,28 +27,33 @@
           "name": "step2",
           "children": [
             "step3"
-          ]
+          ],
+          "optional": false
         },
         {
           "name": "step3",
           "children": [
             "step4a",
             "step4b"
-          ]
+          ],
+          "optional": false
         },
         {
           "name": "step4a",
-          "children": []
+          "children": [],
+          "optional": false
         },
         {
           "name": "step4b",
           "children": [
             "step5"
-          ]
+          ],
+          "optional": true
         },
         {
           "name": "step5",
-          "children": []
+          "children": [],
+          "optional": true
         }
       ]
     }
