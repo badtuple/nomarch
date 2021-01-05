@@ -85,7 +85,7 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                       expire_until_idx = i as isize;
                       if ev.services == complete {
                         info!("event id {:?} completed pipeline {:?}", Uuid::from_u128(ev.id), pipeline.name);
-                      } if ev.services == required {
+                      } if (ev.services & required) == required {
                         info!("event id {:?} completed pipeline {:?}", Uuid::from_u128(ev.id), pipeline.name);
                       } else {
                         info!("event id {:?} did not complete pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
