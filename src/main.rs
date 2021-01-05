@@ -102,7 +102,7 @@ async fn main() -> std::io::Result<()> {
             .service(event_handler)
             .app_data(
                 web::JsonConfig::default()
-                    .limit(1000000) // Limit request payload size
+                    .limit(524288) // Limit request payload size
                 )
     })
     .bind("0.0.0.0:8080")?
