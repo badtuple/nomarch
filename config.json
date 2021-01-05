@@ -10,12 +10,12 @@
           "children": [
             "step2"
           ],
-          "required": false
+          "required": true
         },
         {
           "name": "step2",
           "children": [],
-          "required": false
+          "required": true
         }
       ]
     },
@@ -28,7 +28,7 @@
           "children": [
             "step3"
           ],
-          "required": false
+          "required": true
         },
         {
           "name": "step3",
@@ -36,7 +36,7 @@
             "step4a",
             "step4b"
           ],
-          "required": false
+          "required": true
         },
         {
           "name": "step4a",
