@@ -16,10 +16,21 @@ impl Pipeline {
         }
         mask
     }
+
+    pub fn required_services_mask(&self) -> u32 {
+        let mut mask = 0;
+        for (pos, e) in self.services.iter().enumerate() {
+            if e.required {
+                mask |= 1 << pos;
+            }
+        }
+        mask
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Service {
     pub name: String,
     pub children: Vec<String>,
+    pub required: bool,
 }

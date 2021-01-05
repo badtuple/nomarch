@@ -100,6 +100,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(health_handler)
             .service(event_handler)
+            .app_data(
+                web::JsonConfig::default()
+                    .limit(524288) // Limit request payload size
+                )
     })
     .bind("0.0.0.0:8080")?
     .run()

@@ -11,7 +11,7 @@ use uuid::Uuid;
 // If the channel backs up enough to timeout, then it's under too much load.
 // Since we're doing everything in memory, it'd have to be under crazy stress
 // for that to happen.
-const MAX_CHANNEL_BUFFER: usize = 1000;
+const MAX_CHANNEL_BUFFER: usize = 10000;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Event {
@@ -41,7 +41,7 @@ pub fn start(pipeline: Pipeline) -> Sender<EventBatch> {
 fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
     let mut events: Vec<Event> = vec![];
     let complete = pipeline.completed_services_mask();
-
+    let required = pipeline.required_services_mask();
     // Used to batch incoming events that will be applied to the full events list on tick.
     let mut event_set: HashMap<u128, Event> = HashMap::new();
 
@@ -83,10 +83,10 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
 
                     if expire_at < now {
                       expire_until_idx = i as isize;
-                      if ev.services == complete {
-                          info!("event id {:?} completed pipeline {:?}", Uuid::from_u128(ev.id), pipeline.name);
+                      if ev.services == complete || (ev.services & required) == required {
+                        info!("event id {:?} completed pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
                       } else {
-                          info!("event id {:?} did not complete pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
+                        info!("event id {:?} did not complete pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
                       }
                     }
                 }

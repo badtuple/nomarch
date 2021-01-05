@@ -42,11 +42,20 @@ Set the following fields explicitly in the config.json:
     "max_seconds_to_reach_end": 900,
 
     // Services an event must pass through in a pipeline.
-    "services" [
-      "a",
-      "b",
-      "c"
-    ]
+    "services": [
+        {
+          "name": "step1",
+          "children": [
+            "step2"
+          ],
+          "required": false
+        },
+        {
+          "name": "step2",
+          "children": [],
+          "required": false
+        }
+      ]
   }
 }
 ```
