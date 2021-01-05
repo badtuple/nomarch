@@ -101,7 +101,6 @@ async fn main() -> std::io::Result<()> {
             .service(health_handler)
             .service(event_handler)
             .app_data(
-                // Json extractor configuration for this resource.
                 web::JsonConfig::default()
                     .limit(1000000) // Limit request payload size
                 )
