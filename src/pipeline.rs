@@ -17,13 +17,11 @@ impl Pipeline {
         mask
     }
 
-    pub fn optional_services_mask(&self) -> u32 {
+    pub fn required_services_mask(&self) -> u32 {
         let mut mask = 0;
         for (pos, e) in self.services.iter().enumerate() {
-            if e.optional {
+            if e.required {
                 mask |= 1 << pos;
-            } else {
-                mask |= 0 << pos;
             }
         }
         mask
@@ -34,5 +32,5 @@ impl Pipeline {
 pub struct Service {
     pub name: String,
     pub children: Vec<String>,
-    pub optional: bool,
+    pub required: bool,
 }

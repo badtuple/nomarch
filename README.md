@@ -48,12 +48,12 @@ Set the following fields explicitly in the config.json:
           "children": [
             "step2"
           ],
-          "optional": false
+          "required": false
         },
         {
           "name": "step2",
           "children": [],
-          "optional": false
+          "required": false
         }
       ]
   }
