@@ -88,7 +88,7 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                     if expire_at < now {
                       expire_until_idx = i as isize;
 
-                      if now <= start_evaluating_events_at as u32{
+                      if ev.timestamp <= start_evaluating_events_at as u32{
                           // To stop a flood of erroneous logs/alerts during startup when not all
                           // events may have been reported, we simply don't evaluate or log events
                           // during the time window specified in the config.
