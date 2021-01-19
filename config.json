@@ -4,7 +4,6 @@
     {
       "name": "pipeline1",
       "max_seconds_to_reach_end": 10,
-      "seconds_from_startup_to_ignore_event_evaluation": 0,
       "services": [
         {
           "name": "step1",
@@ -23,7 +22,6 @@
     {
       "name": "pipeline2",
       "max_seconds_to_reach_end": 10,
-      "seconds_from_startup_to_ignore_event_evaluation": 0,
       "services": [
         {
           "name": "step2",

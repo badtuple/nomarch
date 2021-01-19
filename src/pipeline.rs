@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 pub struct Pipeline {
     pub name: String,
     pub max_seconds_to_reach_end: i64,
-    pub seconds_from_startup_to_ignore_event_evaluation: i64,
     pub services: Vec<Service>,
 }
 

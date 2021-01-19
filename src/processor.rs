@@ -1,3 +1,4 @@
+use crate::grace_period;
 use crate::pipeline::Pipeline;
 use chrono::Utc;
 use crossbeam_channel::{bounded, tick, Receiver, Sender};
@@ -47,8 +48,8 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
     // Used to batch incoming events that will be applied to the full events list on tick.
     let mut event_set: HashMap<u128, Event> = HashMap::new();
 
-    let start_evaluating_events_at =
-        Utc::now().timestamp() + pipeline.seconds_from_startup_to_ignore_event_evaluation;
+    let mut grace_period =
+        grace_period::Detector::new(Utc::now().timestamp() + pipeline.max_seconds_to_reach_end);
 
     let ticker = tick(Duration::from_secs(1));
     loop {
@@ -67,11 +68,14 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 }
             },
             recv(ticker) -> _ => {
-                let now = Utc::now().timestamp() as u32;
+                let now = Utc::now().timestamp();
 
                 // Keep track of added and updated events from event_set for logging purposes
                 let mut added = 0;
                 let mut updated = 0;
+
+                // Keep track of incomplete ticks for grace period short circuiting
+                let mut incomplete = 0;
 
                 let mut expire_until_idx: isize = -1;
                 for (i, ev) in events.iter_mut().enumerate() {
@@ -85,20 +89,13 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                             updated += 1;
                     }
 
-                    if expire_at < now {
+                    if expire_at < now as u32 {
                       expire_until_idx = i as isize;
 
-                      if ev.timestamp <= start_evaluating_events_at as u32{
-                          // To stop a flood of erroneous logs/alerts during startup when not all
-                          // events may have been reported, we simply don't evaluate or log events
-                          // during the time window specified in the config.
-                        continue
-                      }
-
-                      if ev.services == complete || (ev.services & required) == required {
-                        info!("event id {:?} completed pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
-                      } else {
-                        info!("event id {:?} did not complete pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
+                      let event_complete = ev.services == complete || (ev.services & required) == required;
+                      report_event_status(ev, &*pipeline.name, event_complete, grace_period.within_grace_period(ev.timestamp));
+                      if !event_complete {
+                        incomplete += 1;
                       }
                     }
                 }
@@ -119,6 +116,12 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                   info!("expired {:?} events, added {:?} events, updated {:?} events for pipeline {:?}", expired, added, updated, pipeline.name);
                 }
 
+                if incomplete == 0 && expired > 0 {
+                    grace_period.register_successful_tick();
+                } else {
+                    grace_period.register_unsuccessful_tick();
+                }
+
                 // nothing to expire yet
                 if expire_until_idx < 0 {
                     continue
@@ -127,5 +130,25 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 events = events.split_off(expire_until_idx as usize + 1);
             },
         }
+    }
+}
+
+fn report_event_status(ev: &Event, pipeline: &str, complete: bool, in_grace_period: bool) {
+    if in_grace_period {
+        return;
+    }
+
+    let uuid = Uuid::from_u128(ev.id);
+
+    if complete {
+        info!(
+            "event id {:?} completed pipeline {:?} : {:#018b}",
+            uuid, pipeline, ev.services
+        );
+    } else {
+        info!(
+            "event id {:?} did not complete pipeline {:?} : {:#018b}",
+            uuid, pipeline, ev.services
+        );
     }
 }
