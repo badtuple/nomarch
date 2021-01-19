@@ -97,7 +97,7 @@ async fn main() -> std::io::Result<()> {
                 config: config.clone(),
                 senders: senders.clone(),
             })
-            .wrap(Logger::default())
+            .wrap(Logger::default().exclude("/events"))
             .service(health_handler)
             .service(event_handler)
             .app_data(
