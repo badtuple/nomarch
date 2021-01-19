@@ -7,7 +7,7 @@ mod config;
 mod pipeline;
 mod processor;
 
-use actix_web::{get, middleware::Logger, post, web, App, HttpServer, Responder};
+use actix_web::{get, post, web, App, HttpServer, Responder};
 use config::Config;
 use crossbeam_channel::Sender;
 use env_logger::{Builder, Target};
@@ -97,7 +97,6 @@ async fn main() -> std::io::Result<()> {
                 config: config.clone(),
                 senders: senders.clone(),
             })
-            .wrap(Logger::default())
             .service(health_handler)
             .service(event_handler)
             .app_data(
