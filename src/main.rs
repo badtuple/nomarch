@@ -4,6 +4,7 @@ extern crate log;
 extern crate crossbeam_channel;
 
 mod config;
+mod grace_period;
 mod pipeline;
 mod processor;
 
@@ -100,9 +101,8 @@ async fn main() -> std::io::Result<()> {
             .service(health_handler)
             .service(event_handler)
             .app_data(
-                web::JsonConfig::default()
-                    .limit(524288) // Limit request payload size
-                )
+                web::JsonConfig::default().limit(524288), // Limit request payload size
+            )
     })
     .bind("0.0.0.0:8080")?
     .run()
