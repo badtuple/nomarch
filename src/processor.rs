@@ -135,7 +135,6 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
 
 fn report_event_status(ev: &Event, pipeline: &str, complete: bool, in_grace_period: bool) {
     if in_grace_period {
-        info!("skipping because in grace_period");
         return;
     }
 
