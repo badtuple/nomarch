@@ -40,13 +40,17 @@ pub fn start(pipeline: Pipeline) -> Sender<EventBatch> {
 
 fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
     let mut events: Vec<Event> = vec![];
+
     let complete = pipeline.completed_services_mask();
     let required = pipeline.required_services_mask();
+
     // Used to batch incoming events that will be applied to the full events list on tick.
     let mut event_set: HashMap<u128, Event> = HashMap::new();
 
-    let ticker = tick(Duration::from_secs(1));
+    let start_evaluating_events_at =
+        Utc::now().timestamp() + pipeline.seconds_from_startup_to_ignore_event_evaluation;
 
+    let ticker = tick(Duration::from_secs(1));
     loop {
         select! {
             recv(recv) -> msg => {
@@ -83,6 +87,14 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
 
                     if expire_at < now {
                       expire_until_idx = i as isize;
+
+                      if now <= start_evaluating_events_at as u32{
+                          // To stop a flood of erroneous logs/alerts during startup when not all
+                          // events may have been reported, we simply don't evaluate or log events
+                          // during the time window specified in the config.
+                        continue
+                      }
+
                       if ev.services == complete || (ev.services & required) == required {
                         info!("event id {:?} completed pipeline {:?} : {:#018b}", Uuid::from_u128(ev.id), pipeline.name, ev.services);
                       } else {
