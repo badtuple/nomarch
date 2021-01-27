@@ -3,7 +3,7 @@
   "pipelines": [
     {
       "name": "pipeline1",
-      "max_seconds_to_reach_end": 10,
+      "max_seconds_to_reach_end": 18000,
       "services": [
         {
           "name": "step1",

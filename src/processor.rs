@@ -75,7 +75,7 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 let mut updated = 0;
 
                 // Keep track of incomplete ticks for grace period short circuiting
-                let mut incomplete = 0;
+                let mut completed_events = 0;
 
                 let mut expire_until_idx: isize = -1;
                 for (i, ev) in events.iter_mut().enumerate() {
@@ -89,13 +89,12 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                             updated += 1;
                     }
 
-                    if expire_at < now as u32 {
+                    if expire_at > now as u32 {
                       expire_until_idx = i as isize;
-
                       let event_complete = ev.services == complete || (ev.services & required) == required;
                       report_event_status(ev, &*pipeline.name, event_complete, grace_period.within_grace_period(ev.timestamp));
-                      if !event_complete {
-                        incomplete += 1;
+                      if event_complete {
+                        completed_events += 1;
                       }
                     }
                 }
@@ -116,10 +115,8 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                   info!("expired {:?} events, added {:?} events, updated {:?} events for pipeline {:?}", expired, added, updated, pipeline.name);
                 }
 
-                if incomplete == 0 && expired > 0 {
+                if completed_events  > 0 && expired > 0 {
                     grace_period.register_successful_tick();
-                } else {
-                    grace_period.register_unsuccessful_tick();
                 }
 
                 // nothing to expire yet
