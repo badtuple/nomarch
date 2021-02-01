@@ -18,7 +18,7 @@ const MAX_CHANNEL_BUFFER: usize = 10000;
 pub struct Event {
     id: u128,
     timestamp: u32,
-
+    complete: bool,
     // Used as a bitfield to keep track of which services have seen this event.
     // This means that there can only be up to 32 services in a pipeline.
     services: u32,
@@ -64,7 +64,7 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 for id in &batch.events {
                     event_set.entry(*id)
                         .and_modify(|e| { (*e).services |= batch.service_mask })
-                        .or_insert(Event{id: *id, timestamp, services: batch.service_mask});
+                        .or_insert(Event{id: *id, timestamp, services: batch.service_mask, complete: false});
                 }
             },
             recv(ticker) -> _ => {
@@ -73,10 +73,10 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 // Keep track of added and updated events from event_set for logging purposes
                 let mut added = 0;
                 let mut updated = 0;
+                let mut expired = 0;
 
                 // Keep track of incomplete ticks for grace period short circuiting
-                let mut incomplete = 0;
-
+                let mut completed_events = 0;
                 let mut expire_until_idx: isize = -1;
                 for (i, ev) in events.iter_mut().enumerate() {
                     let expire_at = ev.timestamp + pipeline.max_seconds_to_reach_end as u32;
@@ -89,13 +89,25 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                             updated += 1;
                     }
 
+                    let event_complete = ev.services == complete || (ev.services & required) == required;
+
+                    if event_complete && !ev.complete {
+                        grace_period.register_successful_event();
+                        report_event_status(ev, &*pipeline.name, event_complete, grace_period.within_grace_period(ev.timestamp));
+                        ev.complete = true;
+                        completed_events += 1;
+                    }
+
                     if expire_at < now as u32 {
                       expire_until_idx = i as isize;
-
                       let event_complete = ev.services == complete || (ev.services & required) == required;
-                      report_event_status(ev, &*pipeline.name, event_complete, grace_period.within_grace_period(ev.timestamp));
+                      if event_complete && !ev.complete {
+                        report_event_status(ev, &*pipeline.name, event_complete, grace_period.within_grace_period(ev.timestamp));
+                        ev.complete = true;
+                        completed_events += 1;
+                      }
                       if !event_complete {
-                        incomplete += 1;
+                        expired += 1;
                       }
                     }
                 }
@@ -111,22 +123,10 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 // Reset event_set
                 event_set = HashMap::new();
 
-                let expired = expire_until_idx+1;
-                if expired > 0 || updated > 0 || added > 0 {
-                  info!("expired {:?} events, added {:?} events, updated {:?} events for pipeline {:?}", expired, added, updated, pipeline.name);
+                if expired > 0 || updated > 0 || added > 0 || completed_events > 0 {
+                  info!("expired {:?} events, added {:?} events, updated {:?} events, completed {:?} events for pipeline {:?}", 
+                        expired, added, updated, completed_events, pipeline.name);
                 }
-
-                if incomplete == 0 && expired > 0 {
-                    grace_period.register_successful_tick();
-                } else {
-                    grace_period.register_unsuccessful_tick();
-                }
-
-                // nothing to expire yet
-                if expire_until_idx < 0 {
-                    continue
-                }
-
                 events = events.split_off(expire_until_idx as usize + 1);
             },
         }
