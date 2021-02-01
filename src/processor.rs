@@ -78,8 +78,7 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 // Keep track of incomplete ticks for grace period short circuiting
                 let mut completed_events = 0;
 
-                let mut expire_until_idx: isize = -1;
-                for (i, ev) in events.iter_mut().enumerate() {
+                for (_, ev) in events.iter_mut().enumerate() {
                     let expire_at = ev.timestamp + pipeline.max_seconds_to_reach_end as u32;
 
                     // Incorporate latest updates from event_set.
@@ -91,30 +90,25 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                     }
 
                     let event_complete = ev.services == complete || (ev.services & required) == required;
-                    if event_complete {
+
+                    if event_complete && !ev.complete {
+                        grace_period.register_successful_event();
                         report_event_status(ev, &*pipeline.name, event_complete, grace_period.within_grace_period(ev.timestamp));
                         ev.complete = true;
                         completed_events += 1;
                     }
 
                     if expire_at < now as u32 {
-                      expire_until_idx = i as isize;
+                      let event_complete = ev.services == complete || (ev.services & required) == required;
+                      if event_complete && !ev.complete {
+                        report_event_status(ev, &*pipeline.name, event_complete, grace_period.within_grace_period(ev.timestamp));
+                        ev.complete = true;
+                        completed_events += 1;
+                      }
+                      if !event_complete {
+                        expired += 1;
+                      }
                     }
-                }
-                events.retain(|&event| !event.complete);
-                if expire_until_idx > -1 {
-                    let index = expire_until_idx as usize + 1;
-                    let unexpired_events = events.drain(index..).collect();
-                    for (_, ev) in events.iter_mut().enumerate() {
-                        let event_complete = ev.services == complete || (ev.services & required) == required;
-                        report_event_status(ev, &*pipeline.name, event_complete, false);
-                        if event_complete {
-                            completed_events += 1;
-                        } else {
-                            expired+=1;
-                        }
-                    }
-                    events = unexpired_events;
                 }
 
                 // Add all brand new events from event_set to the main event list
@@ -131,10 +125,6 @@ fn process(pipeline: Pipeline, recv: Receiver<EventBatch>) {
                 if expired > 0 || updated > 0 || added > 0 || completed_events > 0 {
                   info!("expired {:?} events, added {:?} events, updated {:?} events, completed {:?} events for pipeline {:?}", 
                         expired, added, updated, completed_events, pipeline.name);
-                }
-
-                if completed_events  > 0 || expired > 0 {
-                    grace_period.register_successful_tick();
                 }
             },
         }
